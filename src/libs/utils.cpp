@@ -54,7 +54,6 @@ map<string, string> parseRequest(const vector<string> &requestLines) {
       requestMap[match[1]] = match[2];
     }
   }
-  cout << "Request: " << request << endl;
   return requestMap;
 }
 

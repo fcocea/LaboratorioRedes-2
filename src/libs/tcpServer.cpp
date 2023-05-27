@@ -85,9 +85,6 @@ void handleRequest(int clientSocket) {
   }
   string path = requestHeaders["Path"];
   path = regex_replace(path, regex("/+"), "/");
-  if (path.length() > 1 && path[path.length() - 1] == '/') {
-    path = path.substr(0, path.length() - 1);
-  }
   requestHeaders["Path"] = path;
   if (path[0] != '/') {
     string response = "HTTP/1.1 400 Bad Request\r\n\r\n";
@@ -104,6 +101,14 @@ void handleRequest(int clientSocket) {
   regex extensionPattern(
       "\\.[a-zA-Z0-9]+$"); // /folder | /folder/ -> /folder/index.html
   if (!regex_search(path, extensionPattern)) {
+    if (path[path.length() - 1] != '/') {
+      string response = "HTTP/1.1 301 Moved Permanently\r\n";
+      response += "Location: " + path + "/\r\n\r\n";
+      write(clientSocket, response.c_str(), response.length());
+      cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
+           << " - 301" << endl;
+      return;
+    }
     path += "/index.html";
   }
   path = "www" + path;
@@ -130,7 +135,8 @@ void handleRequest(int clientSocket) {
        << endl;
 }
 
-void sendFile(int clientSocket, const string &path) {
+void sendFile(int clientSocket, string &path) {
+  path = regex_replace(path, regex("/+"), "/");
   string extension = path.substr(path.find_last_of('.'));
   string contentType =
       MIME.count(extension) ? MIME.at(extension) : "application/octet-stream";

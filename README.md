@@ -4,6 +4,12 @@ El proyecto consiste en un servidor HTTP simple que permite la descarga de archi
 
 Donde las cabeceras de las solicitudes no son de importancia, el servidor no las procesa, y simplemente las ignora. Por otro lado, las cabeceras de las respuestas son generadas automáticamente por el servidor, entregando prioritariamente el tipo de contenido del archivo solicitado, y el largo del contenido en el caso que corresponda.
 
+> Si la ruta del archivo solicitado no cumple de cierta forma la siguiente expresión regular: `.[a-zA-Z0-9]+$`, es decir, si no tiene una extensión, el servidor entenderá que se trata de un directorio, y buscará el archivo `index.html` dentro de dicho directorio. En caso de no encontrarlo, responderá con un mensaje de error. <details> <summary>Extra</summary>
+En caso de considerarse la ruta un directorio y la solicitud no termina con `/`, el servidor realizará la redirección (302) a la misma ruta, pero con `/` al final.
+</details>
+
+
+
 ## Requisitos
 Los requisitos para poder ejecutar el proyecto son los siguientes:
 * CMake 3.10

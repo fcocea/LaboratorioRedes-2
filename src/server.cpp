@@ -17,6 +17,9 @@ int main(int argc, char *argv[]) {
     cerr << "Invalid port number: " << PORT << endl;
     return 1;
   }
+  if (createFolder("www")) {
+    cout << "» The \"www\" folder was created successfully!" << endl;
+  }
   struct tcpServer server;
   createServer(&server, stoi(PORT));
   cout << "» Server listening on port: " << PORT << endl;

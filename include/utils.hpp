@@ -13,5 +13,7 @@ bool verifyFile(const std::string &path);
 bool createFolder(const std::string &path);
 std::map<std::string, std::string>
 parseRequest(const std::vector<std::string> &requestLines);
+std::string joinVector(const std::vector<std::string> &v,
+                       const std::string &delim);
 
 #endif

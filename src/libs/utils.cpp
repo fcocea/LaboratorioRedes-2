@@ -1,4 +1,5 @@
 #include <iostream>
+#include <numeric>
 #include <sys/stat.h>
 
 #include "utils.hpp"
@@ -64,4 +65,11 @@ bool createFolder(const string &path) {
     return true;
   }
   return false;
+}
+
+string joinVector(const vector<string> &v, const string &delim) {
+  return accumulate(v.begin(), v.end(), string(),
+                    [delim](const string &a, const string &b) {
+                      return a.empty() ? b : a + delim + b;
+                    });
 }

@@ -7,13 +7,6 @@
 
 using namespace std;
 
-const string HOST = "127.0.0.1";
-const map<string, string> MIME = {
-    {".html", "text/html"},  {".htm", "text/html"},
-    {".css", "text/css"},    {".js", "application/javascript"},
-    {".png", "image/png"},   {".jpg", "image/jpeg"},
-    {".jpeg", "image/jpeg"}, {".ico", "image/x-icon"}};
-
 void createServer(tcpServer *server, const int port) {
   int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
   if (serverSocket < 0) {
@@ -65,42 +58,37 @@ void handleRequest(int clientSocket) {
   }
   map<string, string> requestHeaders = parseRequest(requestLines);
   if (requestHeaders.empty()) {
-    string body = "<!DOCTYPE html><html><head><title>400 Bad "
-                  "Request</title></head><body><h1>Bad "
-                  "Request</h1><p>The server cannot process the request due to "
-                  "a client error.</p></body></html>";
-    string response = "HTTP/1.1 400 Bad Request\r\n";
-    response += "Content-Type: text/html\r\n";
-    response += "Content-Length: " + to_string(body.length()) + "\r\n\r\n";
-    response += body;
+    string body = joinVector(statusHTML.at(400), "\n");
+    vector<string> responseHeaders = {
+        "HTTP/1.1 " + STATUS.at(400),
+        "Content-Type: text/html",
+        "Content-Length: " + to_string(body.length()),
+    };
+    string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
     write(clientSocket, response.c_str(), response.length());
     return;
   }
   if (requestHeaders["Version"] != "HTTP/1.1") {
-    string body = "<!DOCTYPE html><html><head><title>505 HTTP Version "
-                  "Not "
-                  "Supported</title></head><body><h1>HTTP Version Not "
-                  "Supported</h1><p>The requested HTTP version is not "
-                  "supported by the server.</p></body></html>";
-    string response = "HTTP/1.1 505 HTTP Version Not Supported\r\n";
-    response += "Content-Type: text/html\r\n";
-    response += "Content-Length: " + to_string(body.length()) + "\r\n\r\n";
-    response += body;
+    string body = joinVector(statusHTML.at(505), "\n");
+    vector<string> responseHeaders = {
+        "HTTP/1.1 " + STATUS.at(505),
+        "Content-Type: text/html",
+        "Content-Length: " + to_string(body.length()),
+    };
+    string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
     write(clientSocket, response.c_str(), response.length());
     cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
          << " - 505" << endl;
     return;
   }
   if (requestHeaders["Method"] != "GET") {
-    string body = "<!DOCTYPE html><html><head><title>405 Method "
-                  "Not "
-                  "Allowed</title></head><body><h1>Method Not "
-                  "Allowed</h1><p>The requested method "
-                  "is not allowed for the URL.</p></body></html>";
-    string response = "HTTP/1.1 405 Method Not Allowed\r\n";
-    response += "Content-Type: text/html\r\n";
-    response += "Content-Length: " + to_string(body.length()) + "\r\n\r\n";
-    response += body;
+    string body = joinVector(statusHTML.at(405), "\n");
+    vector<string> responseHeaders = {
+        "HTTP/1.1 " + STATUS.at(405),
+        "Content-Type: text/html",
+        "Content-Length: " + to_string(body.length()),
+    };
+    string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
     write(clientSocket, response.c_str(), response.length());
     cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
          << " - 405" << endl;
@@ -110,7 +98,13 @@ void handleRequest(int clientSocket) {
   path = regex_replace(path, regex("/+"), "/");
   requestHeaders["Path"] = path;
   if (path[0] != '/') {
-    string response = "HTTP/1.1 400 Bad Request\r\n\r\n";
+    string body = joinVector(statusHTML.at(400), "\n");
+    vector<string> responseHeaders = {
+        "HTTP/1.1 " + STATUS.at(400),
+        "Content-Type: text/html",
+        "Content-Length: " + to_string(body.length()),
+    };
+    string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
     write(clientSocket, response.c_str(), response.length());
     cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
          << " - 400" << endl;
@@ -125,16 +119,15 @@ void handleRequest(int clientSocket) {
       "\\.[a-zA-Z0-9]+$"); // /folder | /folder/ -> /folder/index.html
   if (!regex_search(path, extensionPattern)) {
     if (path[path.length() - 1] != '/') { // /folder -> /folder/
-      string body = "<!DOCTYPE html><html><head><title>301 Moved "
-                    "Permanently</title></head><body><h1>Moved "
-                    "Permanently</h1><p>The requested URL " +
-                    requestHeaders["Path"] + " was moved permanently to " +
-                    requestHeaders["Path"] + "/</p></body></html>";
-      string response = "HTTP/1.1 301 Moved Permanently\r\n";
-      response += "Content-Type: text/html\r\n";
-      response += "Content-Length: " + to_string(body.length()) + "\r\n";
-      response += "Location: " + path + "/\r\n\r\n";
-      response += body;
+      string body = joinVector(statusHTML.at(301), "\n");
+      body = regex_replace(body, regex("\\$\\{URL\\}"), requestHeaders["Path"]);
+      body = regex_replace(body, regex("\\$\\{NEW_URL\\}"),
+                           requestHeaders["Path"] + "/");
+      vector<string> responseHeaders = {
+          "HTTP/1.1 " + STATUS.at(301), "Content-Type: text/html",
+          "Content-Length: " + to_string(body.length()),
+          "Location: " + requestHeaders["Path"] + "/"};
+      string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
       write(clientSocket, response.c_str(), response.length());
       cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
            << " - 301" << endl;
@@ -144,16 +137,14 @@ void handleRequest(int clientSocket) {
   }
   path = "www" + path;
   if (!verifyFile(path)) {
-    string body = "<!DOCTYPE html><html><head><title>404 Not "
-                  "Found</title></head><body><h1>Not "
-                  "Found</h1><p>The requested URL " +
-                  requestHeaders["Path"] +
-                  " was not found on this "
-                  "server.</p></body></html>";
-    string response = "HTTP/1.1 404 Not Found\r\n";
-    response += "Content-Type: text/html\r\n";
-    response += "Content-Length: " + to_string(body.length()) + "\r\n\r\n";
-    response += body;
+    string body = joinVector(statusHTML.at(404), "\n");
+    body = regex_replace(body, regex("\\$\\{URL\\}"), requestHeaders["Path"]);
+    vector<string> responseHeaders = {
+        "HTTP/1.1 " + STATUS.at(404),
+        "Content-Type: text/html",
+        "Content-Length: " + to_string(body.length()),
+    };
+    string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
     write(clientSocket, response.c_str(), response.length());
 
     cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
@@ -173,16 +164,13 @@ void sendFile(int clientSocket, string &path) {
 
   FILE *file = fopen(path.c_str(), "rb");
   if (!file) {
-    string body = "<!DOCTYPE html><html><head><title>500 Internal "
-                  "Server "
-                  "Error</title></head><body><h1>Internal Server "
-                  "Error</h1><p>The server encountered an internal error or "
-                  "misconfiguration and was unable to complete your "
-                  "request.</p></body></html>";
-    string response = "HTTP/1.1 500 Internal Server Error\r\n";
-    response += "Content-Type: text/html\r\n";
-    response += "Content-Length: " + to_string(body.length()) + "\r\n\r\n";
-    response += body;
+    string body = joinVector(statusHTML.at(500), "\n");
+    vector<string> responseHeaders = {
+        "HTTP/1.1 " + STATUS.at(500),
+        "Content-Type: text/html",
+        "Content-Length: " + to_string(body.length()),
+    };
+    string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
     write(clientSocket, response.c_str(), response.length());
     cout << "Failed to send file: " << path << " - 500" << endl;
     return;
@@ -190,9 +178,12 @@ void sendFile(int clientSocket, string &path) {
   fseek(file, 0, SEEK_END);
   int fileSize = ftell(file);
   rewind(file);
-  string response = "HTTP/1.1 200 OK\r\n";
-  response += "Content-Type: " + contentType + "\r\n";
-  response += "Content-Length: " + to_string(fileSize) + "\r\n\r\n";
+  vector<string> responseHeaders = {
+      "HTTP/1.1 " + STATUS.at(200),
+      "Content-Type: " + contentType,
+      "Content-Length: " + to_string(fileSize),
+  };
+  string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n";
   write(clientSocket, response.c_str(), response.length());
   char buffer[BUFFER_SIZE];
   int bytesRead;

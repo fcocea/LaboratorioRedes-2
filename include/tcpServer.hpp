@@ -24,6 +24,7 @@ const std::map<int, std::string> STATUS = {
     {400, "400 Bad Request"},
     {404, "404 Not Found"},
     {405, "405 Method Not Allowed"},
+    {418, "418 I'm a teapot"},
     {500, "500 Internal Server Error"},
     {505, "505 HTTP Version Not Supported"}};
 const std::map<int, std::vector<std::string>> statusHTML = {
@@ -73,21 +74,31 @@ const std::map<int, std::vector<std::string>> statusHTML = {
       {"    <p>The requested method is not allowed for the URL.</p>"},
       {"  </body>"},
       {"</html>\n"}}},
+    {418,
+     {{"<!DOCTYPE html>"},
+      {"<html>"},
+      {"  <head>"},
+      {"    <title>418 I'm a teapot</title>"},
+      {"  </head>"},
+      {"  <body>"},
+      {"    <h1>I'm a teapot</h1>"},
+      {"    <p>The server refuses to brew coffee because it is, permanently, a "
+       "teapot.</p>"},
+      {"  </body>"},
+      {"</html>\n"}}},
     {500,
-     {
-         {"<!DOCTYPE html>"},
-         {"<html>"},
-         {"  <head>"},
-         {"    <title>500 Internal Server Error</title>"},
-         {"  </head>"},
-         {"  <body>"},
-         {"    <h1>Internal Server Error</h1>"},
-         {"    <p>The server encountered an internal error or "
-          "misconfiguration and was unable to complete your "
-          "request.</p>"},
-         {"  </body>"},
-         {"</html>\n"},
-     }},
+     {{"<!DOCTYPE html>"},
+      {"<html>"},
+      {"  <head>"},
+      {"    <title>500 Internal Server Error</title>"},
+      {"  </head>"},
+      {"  <body>"},
+      {"    <h1>Internal Server Error</h1>"},
+      {"    <p>The server encountered an internal error or "
+       "misconfiguration and was unable to complete your "
+       "request.</p>"},
+      {"  </body>"},
+      {"</html>\n"}}},
     {505,
      {{"<!DOCTYPE html>"},
       {"<html>"},

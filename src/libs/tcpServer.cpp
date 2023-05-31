@@ -81,6 +81,19 @@ void handleRequest(int clientSocket) {
          << " - 505" << endl;
     return;
   }
+  if (requestHeaders["Method"] == "BREW") {
+    string body = joinVector(statusHTML.at(418), "\n");
+    vector<string> responseHeaders = {
+        "HTTP/1.1 " + STATUS.at(418),
+        "Content-Type: text/html",
+        "Content-Length: " + to_string(body.length()),
+    };
+    string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
+    write(clientSocket, response.c_str(), response.length());
+    cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
+         << " - 418" << endl;
+    return;
+  }
   if (requestHeaders["Method"] != "GET") {
     string body = joinVector(statusHTML.at(405), "\n");
     vector<string> responseHeaders = {

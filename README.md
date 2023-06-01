@@ -8,13 +8,14 @@ Donde las cabeceras de las solicitudes no son de importancia, el servidor no las
 En caso de considerarse la ruta un directorio y la solicitud no termina con `/`, el servidor realizará la redirección (302) a la misma ruta, pero con `/` al final.
 </details>
 
-
+El protocolo HTTPS es soportado por el servidor, permitiendo la comunicación segura entre el cliente y el servidor. Para ello, es necesario especificar el certificado y la clave privada del servidor al momento de iniciar el programa. En caso de no especificarlos, el servidor solamente aceptará conexiones HTTP.
 
 ## Requisitos
 Los requisitos para poder ejecutar el proyecto son los siguientes:
 * CMake 3.10
 * Make
 * C++ 11
+* [OpenSSL](https://www.openssl.org/)
 
 ## Compilación
 Para instalar y compilar el proyecto es necesario ejecutar los siguientes comandos:
@@ -27,7 +28,7 @@ $ make
 ## Uso
 Para iniciar el servidor es necesario especificar el puerto en el que se va a escuchar. El servidor se ejecuta de la siguiente manera:
 ```bash
-$ ./server -p <puerto>
+$ ./server -p <puerto> [-c <certificado> -k <clave>]
 ```
 > Si el programa no detecta la carpeta `www` en el directorio actual, se creará la respectiva carpeta.
 
@@ -51,7 +52,14 @@ $ openssl genrsa -out <nombre>.key -des3 2048
 $ openssl req -new -key <nombre>.key -out <nombre>.csr
 $ openssl x509 -req -in <nombre>.csr -CA CA.pem -CAkey CA.key -CA createserial -days 3650 -sha256 -extfile <nombre>.ext -out <nombre>.crt
 ```
-Por último, es necesario importar el certificado `CA.pem` en el navegador web que utilizarás para acceder al servidor. Esto permitirá que el certificado sea reconocido como válido y no se muestre un mensaje de advertencia en el navegador.
+Por último, es necesario importar el certificado `CA.pem` en el navegador web que utilizarás para acceder al servidor. Esto permitirá que el certificado sea reconocido como válido y no se muestre un mensaje de advertencia en el navegador. (Opcional)
+
+Una vez realizado lo anterior, se puede iniciar el servidor con el certificado y su respectiva clave privada:
+```bash
+$ ./server -p <puerto> -c <nombre>.crt -k <nombre>.key
+```
+
+---
 </details>
 
 Una vez iniciado el servidor, se puede acceder a los archivos que se encuentran en la carpeta `www` desde un navegador web o utilizando algún servicio como [Postman](https://www.postman.com/), [Hoppscotch](https://hoppscotch.io/) o [Netcat](https://en.wikipedia.org/wiki/Netcat). Por ejemplo, si el servidor se está ejecutando en el puerto `8080`, se puede acceder a la página `index.html` desde la siguiente URL: [http://localhost:8080/](http://localhost:8080/).

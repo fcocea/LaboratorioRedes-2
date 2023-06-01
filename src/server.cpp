@@ -28,7 +28,12 @@ int main(int argc, char *argv[]) {
     socklen_t client_addr_len = sizeof(client_addr);
     int connectionSocket =
         serverAccept(&server, &client_addr, &client_addr_len);
-    handleRequest(connectionSocket, server.sslContext);
+    unsigned char firstByte;
+    bool SSLConnection = false;
+    if (recv(connectionSocket, &firstByte, sizeof(firstByte), MSG_PEEK)) {
+      SSLConnection = firstByte == 0x16;
+    }
+    handleRequest(connectionSocket, SSLConnection ? server.sslContext : NULL);
     close(connectionSocket);
   }
   close(server.serverSocket);

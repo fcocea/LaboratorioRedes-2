@@ -9,7 +9,8 @@
 
 using namespace std;
 
-void createServer(tcpServer *server, const int port) {
+void createServer(tcpServer *server, const int port, const string &cert,
+                  const string &key) {
   int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
   if (serverSocket < 0) {
     cout << "Error creating socket" << endl;
@@ -19,28 +20,7 @@ void createServer(tcpServer *server, const int port) {
   server->server_addr.sin_family = AF_INET;
   server->server_addr.sin_addr.s_addr = inet_addr(HOST.c_str());
   server->server_addr.sin_port = htons(port);
-  OpenSSL_add_all_algorithms();
-  SSL_load_error_strings();
-  server->sslContext = SSL_CTX_new(TLS_server_method());
-  if (!server->sslContext) {
-    cout << "Error creating SSL context" << endl;
-    exit(1);
-  }
-  if (SSL_CTX_use_certificate_file(server->sslContext, "localhost.crt",
-                                   SSL_FILETYPE_PEM) <= 0) {
-    cout << "Error loading certificate file" << endl;
-    exit(1);
-  }
 
-  if (SSL_CTX_use_PrivateKey_file(server->sslContext, "localhost.key",
-                                  SSL_FILETYPE_PEM) <= 0) {
-    cout << "Error loading private key file" << endl;
-    exit(1);
-  }
-  if (!SSL_CTX_check_private_key(server->sslContext)) {
-    cout << "Error checking private key" << endl;
-    exit(1);
-  }
   if (bind(server->serverSocket, (struct sockaddr *)&(server->server_addr),
            sizeof(server->server_addr)) < 0) {
     cout << "Error binding socket" << endl;
@@ -48,6 +28,30 @@ void createServer(tcpServer *server, const int port) {
   }
   if (listen(server->serverSocket, 5) < 0) {
     cout << "Error listening socket" << endl;
+    exit(1);
+  }
+  if (cert.empty() || key.empty())
+    return;
+  OpenSSL_add_all_algorithms();
+  SSL_load_error_strings();
+  server->sslContext = SSL_CTX_new(TLS_server_method());
+  if (!server->sslContext) {
+    cout << "Error creating SSL context" << endl;
+    exit(1);
+  }
+  if (SSL_CTX_use_certificate_file(server->sslContext, cert.c_str(),
+                                   SSL_FILETYPE_PEM) <= 0) {
+    cout << "Error loading certificate file" << endl;
+    exit(1);
+  }
+
+  if (SSL_CTX_use_PrivateKey_file(server->sslContext, key.c_str(),
+                                  SSL_FILETYPE_PEM) <= 0) {
+    cout << "Error loading private key file" << endl;
+    exit(1);
+  }
+  if (!SSL_CTX_check_private_key(server->sslContext)) {
+    cout << "Error checking private key" << endl;
     exit(1);
   }
 }

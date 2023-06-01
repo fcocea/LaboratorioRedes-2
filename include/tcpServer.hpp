@@ -114,7 +114,8 @@ const std::map<int, std::vector<std::string>> statusHTML = {
       {"  </body>"},
       {"</html>\n"}}}};
 
-void createServer(tcpServer *server, const int port);
+void createServer(tcpServer *server, const int port, const std::string &cert,
+                  const std::string &key);
 int serverAccept(tcpServer *server, sockaddr_in *client_addr,
                  socklen_t *client_addr_len);
 void handleRequest(int clientSocket, SSL_CTX *sslContext);

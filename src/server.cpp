@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
     socklen_t client_addr_len = sizeof(client_addr);
     int connectionSocket =
         serverAccept(&server, &client_addr, &client_addr_len);
-    handleRequest(connectionSocket);
+    handleRequest(connectionSocket, server.sslContext);
     close(connectionSocket);
   }
   close(server.serverSocket);

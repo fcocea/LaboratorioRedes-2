@@ -31,6 +31,29 @@ $ ./server -p <puerto>
 ```
 > Si el programa no detecta la carpeta `www` en el directorio actual, se creará la respectiva carpeta.
 
+<details><summary> Generar certificado SSL </summary>
+
+Se puede generar un certificado SSL para utilizarlo con el servidor. Para ello, es necesario tener instalado [OpenSSL](https://www.openssl.org/). Luego, se deben realizar los siguientes pasos:
+
+- Generar el certificado de la Autoridad de Certificación (CA):
+
+```bash
+$ openssl genrsa -out CA.key -des3 2048
+$ openssl req -x509 -sha256 -new -nodes -days 3650 -key CA.key -out CA.pem
+```
+Estos comandos generarán una clave privada (`CA.key`) y un certificado de la CA (`CA.pem`) que se utilizará para firmar el certificado del servidor.
+
+Una vez generado el certificado de la `CA`, se crea el certificado para el servidor y se firma con el certificado de la `CA`.
+
+* Generar el certificado del servidor:
+```bash
+$ openssl genrsa -out <nombre>.key -des3 2048
+$ openssl req -new -key <nombre>.key -out <nombre>.csr
+$ openssl x509 -req -in <nombre>.csr -CA CA.pem -CAkey CA.key -CA createserial -days 3650 -sha256 -extfile <nombre>.ext -out <nombre>.crt
+```
+Por último, es necesario importar el certificado `CA.pem` en el navegador web que utilizarás para acceder al servidor. Esto permitirá que el certificado sea reconocido como válido y no se muestre un mensaje de advertencia en el navegador.
+</details>
+
 Una vez iniciado el servidor, se puede acceder a los archivos que se encuentran en la carpeta `www` desde un navegador web o utilizando algún servicio como [Postman](https://www.postman.com/), [Hoppscotch](https://hoppscotch.io/) o [Netcat](https://en.wikipedia.org/wiki/Netcat). Por ejemplo, si el servidor se está ejecutando en el puerto `8080`, se puede acceder a la página `index.html` desde la siguiente URL: [http://localhost:8080/](http://localhost:8080/).
 
 ### Créditos

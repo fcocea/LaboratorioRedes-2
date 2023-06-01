@@ -42,8 +42,10 @@ map<string, string> parseRequest(const vector<string> &requestLines) {
   // Otherwhise it is a bad rqeuest (400)
   regex requestPattern(
       "([^\\s]+?)\\s+([^\\s]+?)\\s+HTTP\\/(\\d+|(\\d+\\.\\d+))$");
-  if (!regex_match(requestLines[0], requestPattern))
+  if (!regex_match(requestLines[0], requestPattern)) {
+    cout << requestLines[0] << endl;
     return requestMap;
+  }
   const string request = regex_replace(requestLines[0], regex("\\s+"), " ");
   requestMap["Method"] = request.substr(0, request.find(' '));
   requestMap["Path"] = request.substr(

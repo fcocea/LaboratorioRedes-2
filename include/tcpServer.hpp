@@ -3,6 +3,8 @@
 
 #include <arpa/inet.h>
 #include <map>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -10,6 +12,7 @@
 struct tcpServer {
   struct sockaddr_in server_addr;
   int serverSocket;
+  SSL_CTX *sslContext;
 };
 
 const std::string HOST = "127.0.0.1";
@@ -114,7 +117,7 @@ const std::map<int, std::vector<std::string>> statusHTML = {
 void createServer(tcpServer *server, const int port);
 int serverAccept(tcpServer *server, sockaddr_in *client_addr,
                  socklen_t *client_addr_len);
-void handleRequest(int clientSocket);
-void sendFile(int clientSocket, std::string &path);
+void handleRequest(int clientSocket, SSL_CTX *sslContext);
+void sendFile(int clientSocket, SSL *ssl, std::string &path, bool isSecure);
 
 #endif

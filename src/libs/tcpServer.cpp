@@ -2,6 +2,8 @@
 
 #include "tcpServer.hpp"
 #include "utils.hpp"
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 
 #define BUFFER_SIZE 1024
 
@@ -17,7 +19,28 @@ void createServer(tcpServer *server, const int port) {
   server->server_addr.sin_family = AF_INET;
   server->server_addr.sin_addr.s_addr = inet_addr(HOST.c_str());
   server->server_addr.sin_port = htons(port);
+  OpenSSL_add_all_algorithms();
+  SSL_load_error_strings();
+  server->sslContext = SSL_CTX_new(TLS_server_method());
+  if (!server->sslContext) {
+    cout << "Error creating SSL context" << endl;
+    exit(1);
+  }
+  if (SSL_CTX_use_certificate_file(server->sslContext, "localhost.crt",
+                                   SSL_FILETYPE_PEM) <= 0) {
+    cout << "Error loading certificate file" << endl;
+    exit(1);
+  }
 
+  if (SSL_CTX_use_PrivateKey_file(server->sslContext, "localhost.key",
+                                  SSL_FILETYPE_PEM) <= 0) {
+    cout << "Error loading private key file" << endl;
+    exit(1);
+  }
+  if (!SSL_CTX_check_private_key(server->sslContext)) {
+    cout << "Error checking private key" << endl;
+    exit(1);
+  }
   if (bind(server->serverSocket, (struct sockaddr *)&(server->server_addr),
            sizeof(server->server_addr)) < 0) {
     cout << "Error binding socket" << endl;
@@ -40,9 +63,16 @@ int serverAccept(tcpServer *server, sockaddr_in *client_addr,
   return connectionSocket;
 }
 
-void handleRequest(int clientSocket) {
+void handleRequest(int clientSocket, SSL_CTX *sslContext) {
+  bool isSecure = true;
+  SSL *ssl = SSL_new(sslContext);
+  SSL_set_fd(ssl, clientSocket);
+  if (SSL_accept(ssl) <= 0) {
+    isSecure = false;
+  }
   char buffer[BUFFER_SIZE];
-  int clientRequest = read(clientSocket, buffer, BUFFER_SIZE - 1);
+  int clientRequest = isSecure ? SSL_read(ssl, buffer, BUFFER_SIZE - 1)
+                               : read(clientSocket, buffer, BUFFER_SIZE - 1);
   if (clientRequest < 0) {
     cout << "A problem occurred while processing the client's request." << endl;
     return;
@@ -52,8 +82,8 @@ void handleRequest(int clientSocket) {
   stringstream ss(request);
   string line;
   while (getline(ss, line, '\n')) {
-    line.erase(remove(line.begin(), line.end(), '\r'), line.end());
-    line.erase(remove(line.begin(), line.end(), '\n'), line.end());
+    line = regex_replace(line, regex("\r"), "");
+    line = regex_replace(line, regex("\n"), "");
     requestLines.push_back(line);
   }
   map<string, string> requestHeaders = parseRequest(requestLines);
@@ -65,7 +95,8 @@ void handleRequest(int clientSocket) {
         "Content-Length: " + to_string(body.length()),
     };
     string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
-    write(clientSocket, response.c_str(), response.length());
+    isSecure ? SSL_write(ssl, response.c_str(), response.length())
+             : write(clientSocket, response.c_str(), response.length());
     return;
   }
   if (requestHeaders["Version"] != "HTTP/1.1") {
@@ -76,7 +107,8 @@ void handleRequest(int clientSocket) {
         "Content-Length: " + to_string(body.length()),
     };
     string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
-    write(clientSocket, response.c_str(), response.length());
+    isSecure ? SSL_write(ssl, response.c_str(), response.length())
+             : write(clientSocket, response.c_str(), response.length());
     cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
          << " - 505" << endl;
     return;
@@ -89,7 +121,8 @@ void handleRequest(int clientSocket) {
         "Content-Length: " + to_string(body.length()),
     };
     string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
-    write(clientSocket, response.c_str(), response.length());
+    isSecure ? SSL_write(ssl, response.c_str(), response.length())
+             : write(clientSocket, response.c_str(), response.length());
     cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
          << " - 418" << endl;
     return;
@@ -102,7 +135,8 @@ void handleRequest(int clientSocket) {
         "Content-Length: " + to_string(body.length()),
     };
     string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
-    write(clientSocket, response.c_str(), response.length());
+    isSecure ? SSL_write(ssl, response.c_str(), response.length())
+             : write(clientSocket, response.c_str(), response.length());
     cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
          << " - 405" << endl;
     return;
@@ -118,7 +152,8 @@ void handleRequest(int clientSocket) {
         "Content-Length: " + to_string(body.length()),
     };
     string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
-    write(clientSocket, response.c_str(), response.length());
+    isSecure ? SSL_write(ssl, response.c_str(), response.length())
+             : write(clientSocket, response.c_str(), response.length());
     cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
          << " - 400" << endl;
     return;
@@ -141,7 +176,8 @@ void handleRequest(int clientSocket) {
           "Content-Length: " + to_string(body.length()),
           "Location: " + requestHeaders["Path"] + "/"};
       string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
-      write(clientSocket, response.c_str(), response.length());
+      isSecure ? SSL_write(ssl, response.c_str(), response.length())
+               : write(clientSocket, response.c_str(), response.length());
       cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
            << " - 301" << endl;
       return;
@@ -158,18 +194,24 @@ void handleRequest(int clientSocket) {
         "Content-Length: " + to_string(body.length()),
     };
     string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
-    write(clientSocket, response.c_str(), response.length());
+    isSecure ? SSL_write(ssl, response.c_str(), response.length())
+             : write(clientSocket, response.c_str(), response.length());
 
     cout << requestHeaders["Method"] << " " << requestHeaders["Path"]
          << " - 404" << endl;
     return;
   }
-  sendFile(clientSocket, path);
+  sendFile(clientSocket, ssl, path, isSecure);
   cout << requestHeaders["Method"] << " " << requestHeaders["Path"] << " - 200"
        << endl;
+  close(clientSocket);
+  if (!isSecure)
+    return;
+  SSL_shutdown(ssl);
+  SSL_free(ssl);
 }
 
-void sendFile(int clientSocket, string &path) {
+void sendFile(int clientSocket, SSL *ssl, string &path, bool isSecure) {
   path = regex_replace(path, regex("/+"), "/");
   string extension = path.substr(path.find_last_of('.'));
   string contentType =
@@ -184,7 +226,8 @@ void sendFile(int clientSocket, string &path) {
         "Content-Length: " + to_string(body.length()),
     };
     string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n" + body;
-    write(clientSocket, response.c_str(), response.length());
+    isSecure ? SSL_write(ssl, response.c_str(), response.length())
+             : write(clientSocket, response.c_str(), response.length());
     cout << "Failed to send file: " << path << " - 500" << endl;
     return;
   }
@@ -197,10 +240,12 @@ void sendFile(int clientSocket, string &path) {
       "Content-Length: " + to_string(fileSize),
   };
   string response = joinVector(responseHeaders, "\r\n") + "\r\n\r\n";
-  write(clientSocket, response.c_str(), response.length());
+  isSecure ? SSL_write(ssl, response.c_str(), response.length())
+           : write(clientSocket, response.c_str(), response.length());
   char buffer[BUFFER_SIZE];
   int bytesRead;
   while ((bytesRead = fread(buffer, 1, BUFFER_SIZE, file)) > 0)
-    write(clientSocket, buffer, bytesRead);
+    isSecure ? SSL_write(ssl, buffer, bytesRead)
+             : write(clientSocket, buffer, bytesRead);
   fclose(file);
 }

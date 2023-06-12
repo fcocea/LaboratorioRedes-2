@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     cout << "Missing required parameter -k PRIVATE_KEY" << endl;
     return 1;
   }
-  if (!verifyFile(CERTIFICATE)) {
+  if (!CERTIFICATE.empty() && !verifyFile(CERTIFICATE)) {
     cout << "Invalid certificate file: " << CERTIFICATE << endl;
     return 1;
   }
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     cout << "Missing required parameter -c CERTIFICATE" << endl;
     return 1;
   }
-  if (!verifyFile(PRIVATE_KEY)) {
+  if (!PRIVATE_KEY.empty() && !verifyFile(PRIVATE_KEY)) {
     cout << "Invalid private key file: " << PRIVATE_KEY << endl;
     return 1;
   }

@@ -40,7 +40,8 @@ Se puede generar un certificado SSL para utilizarlo con el servidor. Para ello, 
 
 ```bash
 $ openssl genrsa -out CA.key -des3 2048
-$ openssl req -x509 -sha256 -new -nodes -days 3650 -key CA.key -out CA.pem
+$ openssl req -x509 -sha256 -new -nodes \
+    -days 3650 -key CA.key -out CA.pem
 ```
 Estos comandos generarán una clave privada (`CA.key`) y un certificado de la CA (`CA.pem`) que se utilizará para firmar el certificado del servidor.
 
@@ -50,9 +51,13 @@ Una vez generado el certificado de la `CA`, se crea el certificado para el servi
 ```bash
 $ openssl genrsa -out <nombre>.key -des3 2048
 $ openssl req -new -key <nombre>.key -out <nombre>.csr
-$ openssl x509 -req -in <nombre>.csr -CA CA.pem -CAkey CA.key -CA createserial -days 3650 -sha256 -extfile <nombre>.ext -out <nombre>.crt
+$ openssl x509 -req -in <nombre>.csr -CA CA.pem \ 
+    -CAkey CA.key -CAcreateserial -days 3650 -sha256 \
+    -extfile <(echo -e "authorityKeyIdentifier = keyid,issuer\nbasicConstraints = CA:FALSE\nkeyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment\nsubjectAltName = @alt_names\n\n[alt_names]\nDNS.1 = localhost\nIP.1 = 127.0.0.1") \
+    -out <nombre>.crt
+
 ```
-Por último, es necesario importar el certificado `CA.pem` en el navegador web que utilizarás para acceder al servidor. Esto permitirá que el certificado sea reconocido como válido y no se muestre un mensaje de advertencia en el navegador. (Opcional)
+Por último, es necesario importar el certificado `CA.pem` en el navegador web que se utilizará para acceder al servidor. Esto permitirá que el certificado sea reconocido como válido y no se muestre un mensaje de advertencia en el navegador. (Opcional)
 
 Una vez realizado lo anterior, se puede iniciar el servidor con el certificado y su respectiva clave privada:
 ```bash

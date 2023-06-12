@@ -51,8 +51,13 @@ Una vez generado el certificado de la `CA`, se crea el certificado para el servi
 ```bash
 $ openssl genrsa -out <nombre>.key -des3 2048
 $ openssl req -new -key <nombre>.key -out <nombre>.csr
-$ openssl x509 -req -in <nombre>.csr -CA CA.pem \ 
-    -CAkey CA.key -CAcreateserial -days 3650 -sha256 \
+$ openssl x509 -req \
+    -in <nombre>.csr \
+    -CA CA.pem \
+    -CAkey CA.key \
+    -CAcreateserial \
+    -days 3650 \
+    -sha256 \
     -extfile <(echo -e "authorityKeyIdentifier = keyid,issuer\nbasicConstraints = CA:FALSE\nkeyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment\nsubjectAltName = @alt_names\n\n[alt_names]\nDNS.1 = localhost\nIP.1 = 127.0.0.1") \
     -out <nombre>.crt
 
